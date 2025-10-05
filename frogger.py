@@ -147,3 +147,6 @@ while ejecutando:
         ejecutando = False
 
 pygame.quit()
+
+
+#LoveToCapybaras
