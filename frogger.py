@@ -2,35 +2,52 @@ import pygame
 from modules import escenario_mapa_juego as escenario
 from modules.movimiento_rana import Rana
 from modules.obstaculos_carrera import Carretera
+from modules.obstaculos_rio import Rio
 
 pygame.init()
 
 # Configuración inicial
 ANCHO, ALTO = 800, 600
 ventana = pygame.display.set_mode((ANCHO, ALTO), pygame.RESIZABLE)
-pygame.display.set_caption("Frogger - Test Integración")
+pygame.display.set_caption("Frogger - Integración completa")
 
 # Rana
 rana = Rana(ANCHO, ALTO)
 
-# Carretera: vamos a ubicar coches en la zona de carretera que nos da el escenario
+# Escenario base
 zonas = escenario.calcular_secciones(ANCHO, ALTO)
-carretera_rect = zonas["carretera"]
 
-# Carriles = filas dentro de la carretera, en base al grid de la rana
+# ===================== #
+#   CARRILES CARRETERA  #
+# ===================== #
+carretera_rect = zonas["carretera"]
 filas_carretera = []
 fila_inicio = carretera_rect.top // rana.tam_celda
 fila_fin = carretera_rect.bottom // rana.tam_celda
 for fila in range(fila_inicio, fila_fin):
     filas_carretera.append(fila)
-
 carretera = Carretera(ANCHO, ALTO, rana.tam_celda, filas_carretera)
 
-# Clock para controlar FPS
+# ===================== #
+#       CARRILES RÍO     #
+# ===================== #
+rio_rect = zonas["rio"]
+filas_rio = []
+fila_inicio_rio = rio_rect.top // rana.tam_celda
+fila_fin_rio = rio_rect.bottom // rana.tam_celda
+for fila in range(fila_inicio_rio, fila_fin_rio):
+    filas_rio.append(fila)
+rio = Rio(ANCHO, ALTO, rana.tam_celda, filas_rio)
+
+# ===================== #
+#        CONTROL FPS     #
+# ===================== #
 clock = pygame.time.Clock()
 FPS = 60
 
-# Bucle principal
+# ===================== #
+#       BUCLE PRINCIPAL  #
+# ===================== #
 ejecutando = True
 while ejecutando:
     for evento in pygame.event.get():
@@ -49,37 +66,51 @@ while ejecutando:
                 rana.mover("derecha")
 
         elif evento.type == pygame.VIDEORESIZE:
+            # Recalcular todo al cambiar tamaño
             ANCHO, ALTO = evento.w, evento.h
             ventana = pygame.display.set_mode((ANCHO, ALTO), pygame.RESIZABLE)
             zonas = escenario.calcular_secciones(ANCHO, ALTO)
-            carretera_rect = zonas["carretera"]
 
-            # Recalcular carriles al hacer resize
+            # Recalcular carretera
+            carretera_rect = zonas["carretera"]
             filas_carretera = []
             fila_inicio = carretera_rect.top // rana.tam_celda
             fila_fin = carretera_rect.bottom // rana.tam_celda
             for fila in range(fila_inicio, fila_fin):
                 filas_carretera.append(fila)
-
-            rana.ancho_ventana, rana.alto_ventana = ANCHO, ALTO
             carretera = Carretera(ANCHO, ALTO, rana.tam_celda, filas_carretera)
 
-    # Mover coches
+            # Recalcular río
+            rio_rect = zonas["rio"]
+            filas_rio = []
+            fila_inicio_rio = rio_rect.top // rana.tam_celda
+            fila_fin_rio = rio_rect.bottom // rana.tam_celda
+            for fila in range(fila_inicio_rio, fila_fin_rio):
+                filas_rio.append(fila)
+            rio = Rio(ANCHO, ALTO, rana.tam_celda, filas_rio)
+
+            rana.ancho_ventana, rana.alto_ventana = ANCHO, ALTO
+            rana.reset_posicion()
+
+    # ===================== #
+    #    LÓGICA DE JUEGO    #
+    # ===================== #
     carretera.mover()
+    rio.mover()
+    rio.actualizar_rana(rana)
 
-    # Dibujar escenario
+    # ===================== #
+    #    DIBUJAR ELEMENTOS  #
+    # ===================== #
     zonas = escenario.dibujar_mapa(ventana, ANCHO, ALTO)
-
-    # Dibujar rana
+    rio.dibujar(ventana)
+    carretera.dibujar(ventana)
     rana.dibujar(ventana)
 
-    # Dibujar coches
-    carretera.dibujar(ventana)
-
-    # Verificar colisión rana–coche
+    # Colisión con coches
     rana_rect = pygame.Rect(rana.x, rana.y, rana.tam_celda, rana.tam_celda)
     if carretera.verificar_colision(rana_rect):
-        print("💥 ¡Colisión detectada! Reiniciando rana...")
+        print("💥 ¡Colisión con coche! Reiniciando rana...")
         rana.reset_posicion()
 
     pygame.display.flip()
